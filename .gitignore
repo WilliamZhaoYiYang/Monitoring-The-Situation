@@ -1,0 +1,17 @@
+# Visual Studio
+.vs/
+bin/
+obj/
+
+# Rider
+.idea/
+
+# User files
+*.user
+*.suo
+
+# NuGet
+packages/
+
+# Build logs
+*.log
