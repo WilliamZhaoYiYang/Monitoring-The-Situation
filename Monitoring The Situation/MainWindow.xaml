@@ -7,16 +7,19 @@
 
     <Window.Resources>
         <!--Colours-->
-        <SolidColorBrush x:Key="BackgroundBrush"   Color="#1A1A2E"/>
-        <SolidColorBrush x:Key="NavBarBrush"        Color="#16213E"/>
-        <SolidColorBrush x:Key="TabActiveBrush"     Color="#0F3460"/>
-        <SolidColorBrush x:Key="TabHoverBrush"      Color="#1A2E4A"/>
-        <SolidColorBrush x:Key="TabInactiveBrush"   Color="Transparent"/>
-        <SolidColorBrush x:Key="AccentBrush"        Color="#E94560"/>
-        <SolidColorBrush x:Key="TextPrimaryBrush"   Color="#EAEAEA"/>
-        <SolidColorBrush x:Key="TextMutedBrush"     Color="#7A8CA0"/>
-        <SolidColorBrush x:Key="CellBorderBrush"    Color="#0F3460"/>
+        <SolidColorBrush x:Key="BackgroundBrush"    Color="#1A1A2E"/>
+        <SolidColorBrush x:Key="NavBarBrush"         Color="#16213E"/>
+        <SolidColorBrush x:Key="TabActiveBrush"      Color="#0F3460"/>
+        <SolidColorBrush x:Key="TabHoverBrush"       Color="#1A2E4A"/>
+        <SolidColorBrush x:Key="TabInactiveBrush"    Color="Transparent"/>
+        <SolidColorBrush x:Key="AccentBrush"         Color="#E94560"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush"    Color="#EAEAEA"/>
+        <SolidColorBrush x:Key="TextMutedBrush"      Color="#7A8CA0"/>
+        <SolidColorBrush x:Key="CellBorderBrush"     Color="#0F3460"/>
         <SolidColorBrush x:Key="CellBackgroundBrush" Color="#16213E"/>
+        <SolidColorBrush x:Key="HandleBrush"         Color="#E94560"/>
+        <SolidColorBrush x:Key="HandleHoverBrush"    Color="#FF6B81"/>
+        <SolidColorBrush x:Key="DragPreviewBrush"    Color="#55E94560"/>
 
         <!--Tab Button Hover Style-->
         <Style x:Key="TabButtonStyle" TargetType="Button">
@@ -24,7 +27,6 @@
             <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -34,7 +36,7 @@
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
                         </Border>
-
+                        
                         <ControlTemplate.Triggers>
 
                             <!--Hover-->
@@ -53,8 +55,8 @@
                                         Property="Background"
                                         Value="#0F3460"/>
                             </Trigger>
-
                         </ControlTemplate.Triggers>
+                        
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -178,76 +180,27 @@
             </Setter>
         </Style>
 
-        <!--Grid Cell Style-->
+        <!--Grid Cell Border Style-->
         <Style x:Key="GridCellStyle" TargetType="Border">
             <Setter Property="Background"       Value="{StaticResource CellBackgroundBrush}"/>
             <Setter Property="BorderBrush"      Value="{StaticResource CellBorderBrush}"/>
             <Setter Property="BorderThickness"  Value="1"/>
             <Setter Property="CornerRadius"     Value="6"/>
-            <Setter Property="Margin"           Value="6"/>
         </Style>
     </Window.Resources>
-    
-    <!--ROOT: TabControl fills the whole window-->
+
+    <!-- ROOT TabControl -->
     <TabControl x:Name="MainTabControl"
                 Style="{StaticResource BrowserTabControlStyle}">
-        <!--Tab 1-->
-        <TabItem Header="Tab 1"
-                 Style="{StaticResource BrowserTabItemStyle}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Row 0 -->
-                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (0,0)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (0,1)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (0,2)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-
-                <!-- Row 1 -->
-                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (1,0)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (1,1)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (1,2)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-
-                <!-- Row 2 -->
-                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (2,0)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (2,1)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource GridCellStyle}">
-                    <TextBlock Text="Cell (2,2)" Foreground="{StaticResource TextMutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-            </Grid>
+        <TabItem Header="Tab 1" Style="{StaticResource BrowserTabItemStyle}">
+            <!--
+                Each tab's content is a Canvas.
+                ResizableGridHost (code-behind) owns it and places
+                cell Borders + drag Thumbs as Canvas children.
+            -->
+            <Canvas x:Name="InitialGridCanvas"
+                    Background="{StaticResource BackgroundBrush}"
+                    SizeChanged="GridCanvas_SizeChanged"/>
         </TabItem>
     </TabControl>
 </Window>
