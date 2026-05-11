@@ -23,9 +23,15 @@ namespace Monitoring_The_Situation
         // Visual elements of this cell
         public Border? Border { get; set; }
         public TextBlock? Label { get; set; }
-        public Thumb? RightHandle { get; set; }
+
+        public Thumb? TopHandle { get; set; }
         public Thumb? BottomHandle { get; set; }
-        public Thumb? CornerHandle { get; set; }
+        public Thumb? LeftHandle { get; set; }
+        public Thumb? RightHandle { get; set; }
+        public Thumb? BottomLeftHandle { get; set; }
+        public Thumb? BottomRightHandle { get; set; }
+        public Thumb? TopLeftHandle { get; set; }
+        public Thumb? TopRightHandle { get; set; }
 
         public IEnumerable<(int r, int c)> Occupies()
         {
@@ -62,9 +68,22 @@ namespace Monitoring_The_Situation
         private double _dragOriginY;
         private int _previewColSpan;
         private int _previewRowSpan;
+        private int _previewCol;
+        private int _previewRow;
         private bool _cancelled;
 
-        private enum DragMode { Right, Bottom, Corner}
+        private enum DragMode
+        {
+            Left,
+            Right,
+            Top,
+            Bottom,
+
+            TopLeft,
+            TopRight,
+            BottomLeft,
+            BottomRight
+        }
 
         // Constructor ────────────────────────────────────────────────────────────
         public ResizableGridHost(Canvas canvas, Window window)
@@ -127,6 +146,27 @@ namespace Monitoring_The_Situation
             }
             return Math.Max(1, Math.Min(span, ROWS - startRow));
         }
+        private int ColFromLeftEdge(int fixedRightCol, double px)
+        {
+            for (int c = 0; c <= fixedRightCol; c++)
+            {
+                double snapPoint = ColX(c) + UnitW() * (1.0 - SNAP_RATIO);
+                if (px <= snapPoint)
+                    return c;
+            }
+            return fixedRightCol;
+        }
+
+        private int RowFromTopEdge(int fixedBottomRow, double py)
+        {
+            for (int r = 0; r <= fixedBottomRow; r++)
+            {
+                double snapPoint = RowY(r) + UnitH() * (1.0 - SNAP_RATIO);
+                if (py <= snapPoint)
+                    return r;
+            }
+            return fixedBottomRow;
+        }
 
         // Build / Rebuild ─────────────────────────────────────────────────────────
         private void BuildDefaultGrid()
@@ -174,26 +214,53 @@ namespace Monitoring_The_Situation
             cell.Border.Child = cell.Label;
 
             // Show / hide handles on hover
-            cell.Border.MouseEnter += (_, __) => { if (_dragging == null) ShowHandles(cell, true); };
-            cell.Border.MouseLeave += (_, __) => { if (_dragging != cell) ShowHandles(cell, false); };
+            //cell.Border.MouseEnter += (_, __) => { if (_dragging == null) ShowHandles(cell, true); };
+            //cell.Border.MouseLeave += (_, __) => { if (_dragging != cell) ShowHandles(cell, false); };
 
             _canvas.Children.Add(cell.Border);
 
-            // Right handle ─────────────────────────────────────────────────────────
-            cell.RightHandle = MakeHandle(Cursors.SizeWE);
+            // handles ─────────────────────────────────────────────────────────
+            cell.TopHandle = MakeHandle(Cursors.SizeNS);
             cell.BottomHandle = MakeHandle(Cursors.SizeNS);
-            cell.CornerHandle = MakeHandle(Cursors.SizeNWSE);
+            cell.LeftHandle = MakeHandle(Cursors.SizeWE);
+            cell.RightHandle = MakeHandle(Cursors.SizeWE);
+            cell.BottomLeftHandle = MakeHandle(Cursors.SizeNESW);
+            cell.BottomRightHandle = MakeHandle(Cursors.SizeNWSE);
+            cell.TopLeftHandle = MakeHandle(Cursors.SizeNWSE);
+            cell.TopRightHandle = MakeHandle(Cursors.SizeNESW);
 
-            WireHandle(cell.RightHandle, cell, DragMode.Right);
+            WireHandle(cell.TopHandle, cell, DragMode.Top);
             WireHandle(cell.BottomHandle, cell, DragMode.Bottom);
-            WireHandle(cell.CornerHandle, cell, DragMode.Corner);
+            WireHandle(cell.LeftHandle, cell, DragMode.Left);
+            WireHandle(cell.RightHandle, cell, DragMode.Right);
+            WireHandle(cell.BottomLeftHandle, cell, DragMode.BottomLeft);
+            WireHandle(cell.BottomRightHandle, cell, DragMode.BottomRight);
+            WireHandle(cell.TopLeftHandle, cell, DragMode.TopLeft);
+            WireHandle(cell.TopRightHandle, cell, DragMode.TopRight);
 
-            _canvas.Children.Add(cell.RightHandle);
+            _canvas.Children.Add(cell.TopHandle);
             _canvas.Children.Add(cell.BottomHandle);
-            _canvas.Children.Add(cell.CornerHandle);
+            _canvas.Children.Add(cell.LeftHandle);
+            _canvas.Children.Add(cell.RightHandle);
+            _canvas.Children.Add(cell.BottomLeftHandle);
+            _canvas.Children.Add(cell.BottomRightHandle);
+            _canvas.Children.Add(cell.TopLeftHandle);
+            _canvas.Children.Add(cell.TopRightHandle);
 
             _cells.Add(cell);
             return cell;
+        }
+
+        private static IEnumerable<Thumb> AllHandles(CellModel cell)
+        {
+            yield return cell.TopHandle!;
+            yield return cell.BottomHandle!;
+            yield return cell.LeftHandle!;
+            yield return cell.RightHandle!;
+            yield return cell.TopLeftHandle!;
+            yield return cell.TopRightHandle!;
+            yield return cell.BottomLeftHandle!;
+            yield return cell.BottomRightHandle!;
         }
 
         private Thumb MakeHandle(Cursor cursor)
@@ -225,56 +292,106 @@ namespace Monitoring_The_Situation
         // ───────────────────────────────────────────────────────────────────────────
         private void WireHandle(Thumb handle, CellModel cell, DragMode mode)
         {
-            handle.DragStarted += (_, args) =>
+            handle.DragStarted += (_, __) =>
             {
                 _dragging = cell;
                 _dragMode = mode;
                 _cancelled = false;
-
-                // Record the absolute canvas position where the drag originated.
-                // args.HorizontalOffset / VerticalOffset are offsets inside the Thumb,
-                // so we reconstruct the right/bottom edge of the cell at drag start.
-                _dragOriginX = ColX(cell.Col) + CellW(cell.ColSpan);   // right edge
-                _dragOriginY = RowY(cell.Row) + CellH(cell.RowSpan);   // bottom edge
-
-                _previewColSpan = cell.ColSpan;
+                _previewRow = cell.Row;
+                _previewCol = cell.Col;
                 _previewRowSpan = cell.RowSpan;
-
+                _previewColSpan = cell.ColSpan;
                 _preview.Visibility = Visibility.Visible;
-                UpdatePreview(cell.Row, cell.Col, cell.RowSpan, cell.ColSpan);
-
-                // Bring preview to the top
+                UpdatePreview(_previewRow, _previewCol, _previewRowSpan, _previewColSpan);
                 BringPreviewToFront();
             };
 
-            double totalDX = 0, totalDY = 0;
-
-            handle.DragStarted += (_, __) => { totalDX = 0; totalDY = 0; };
-
-            handle.DragDelta += (_, e) =>
+            handle.DragDelta += (_, __) =>
             {
                 if (_dragging != cell || _cancelled)
                     return;
 
                 Point mouse = Mouse.GetPosition(_canvas);
 
-                int newColSpan = cell.ColSpan;
+                int fixedRightCol = cell.Col + cell.ColSpan - 1;
+                int fixedBottomRow = cell.Row + cell.RowSpan - 1;
+
+                int newRow = cell.Row;
+                int newCol = cell.Col;
                 int newRowSpan = cell.RowSpan;
+                int newColSpan = cell.ColSpan;
 
-                if (mode == DragMode.Right || mode == DragMode.Corner)
+                switch (mode)
                 {
-                    newColSpan = ColSpanFromRightEdge(cell.Col, mouse.X);
+                    case DragMode.Right:
+                        newColSpan = ColSpanFromRightEdge(cell.Col, mouse.X);
+                        break;
+
+                    case DragMode.Bottom:
+                        newRowSpan = RowSpanFromBottomEdge(cell.Row, mouse.Y);
+                        break;
+
+                    case DragMode.BottomRight:
+                        newColSpan = ColSpanFromRightEdge(cell.Col, mouse.X);
+                        newRowSpan = RowSpanFromBottomEdge(cell.Row, mouse.Y);
+                        break;
+
+                    case DragMode.Left:
+                        {
+                            int newC = ColFromLeftEdge(fixedRightCol, mouse.X);
+                            newCol = newC;
+                            newColSpan = fixedRightCol - newC + 1;
+                            break;
+                        }
+
+                    case DragMode.Top:
+                        {
+                            int newR = RowFromTopEdge(fixedBottomRow, mouse.Y);
+                            newRow = newR;
+                            newRowSpan = fixedBottomRow - newR + 1;
+                            break;
+                        }
+
+                    case DragMode.TopLeft:
+                        {
+                            int newC = ColFromLeftEdge(fixedRightCol, mouse.X);
+                            int newR = RowFromTopEdge(fixedBottomRow, mouse.Y);
+                            newCol = newC;
+                            newRow = newR;
+                            newColSpan = fixedRightCol - newC + 1;
+                            newRowSpan = fixedBottomRow - newR + 1;
+                            break;
+                        }
+
+                    case DragMode.TopRight:
+                        {
+                            int newR = RowFromTopEdge(fixedBottomRow, mouse.Y);
+                            newRow = newR;
+                            newRowSpan = fixedBottomRow - newR + 1;
+                            newColSpan = ColSpanFromRightEdge(cell.Col, mouse.X);
+                            break;
+                        }
+
+                    case DragMode.BottomLeft:
+                        {
+                            int newC = ColFromLeftEdge(fixedRightCol, mouse.X);
+                            newCol = newC;
+                            newColSpan = fixedRightCol - newC + 1;
+                            newRowSpan = RowSpanFromBottomEdge(cell.Row, mouse.Y);
+                            break;
+                        }
                 }
 
-                if (mode == DragMode.Bottom || mode == DragMode.Corner)
-                {
-                    newRowSpan = RowSpanFromBottomEdge(cell.Row, mouse.Y);
-                }
+                newCol = Math.Max(0, Math.Min(newCol, COLS - 1));
+                newRow = Math.Max(0, Math.Min(newRow, ROWS - 1));
+                newColSpan = Math.Max(1, Math.Min(newColSpan, COLS - newCol));
+                newRowSpan = Math.Max(1, Math.Min(newRowSpan, ROWS - newRow));
 
-                _previewColSpan = newColSpan;
+                _previewRow = newRow;
+                _previewCol = newCol;
                 _previewRowSpan = newRowSpan;
-
-                UpdatePreview(cell.Row, cell.Col, newRowSpan, newColSpan);
+                _previewColSpan = newColSpan;
+                UpdatePreview(newRow, newCol, newRowSpan, newColSpan);
             };
 
             handle.DragCompleted += (_, __) =>
@@ -288,7 +405,7 @@ namespace Monitoring_The_Situation
                 if (_dragging == cell)
                 {
                     _preview.Visibility = Visibility.Collapsed;
-                    ApplyResize(cell, _previewRowSpan, _previewColSpan);
+                    ApplyResize(cell, _previewRow, _previewCol, _previewRowSpan, _previewColSpan);
                     FinishDrag(cell);
                     LayoutAll();
                 }
@@ -310,7 +427,7 @@ namespace Monitoring_The_Situation
 
         private void FinishDrag(CellModel cell)
         {
-            ShowHandles(cell, false);
+            //ShowHandles(cell, false);
             _dragging = null;
             _cancelled = false;
         }
@@ -318,42 +435,40 @@ namespace Monitoring_The_Situation
         // ─────────────────────────────────────────────────────────────────────
         //  Resize / merge
         // ─────────────────────────────────────────────────────────────────────
-        private void ApplyResize(CellModel cell, int newRowSpan, int newColSpan)
+        private void ApplyResize(CellModel cell, int newRow, int newCol, int newRowSpan, int newColSpan)
         {
-            if (newRowSpan == cell.RowSpan && newColSpan == cell.ColSpan) return;
+            bool sameGeometry = newRow == cell.Row && newCol == cell.Col
+                             && newRowSpan == cell.RowSpan && newColSpan == cell.ColSpan;
+            if (sameGeometry) return;
 
             var newSlots = new HashSet<(int, int)>();
-            for (int r = cell.Row; r < cell.Row + newRowSpan; r++)
-                for (int c = cell.Col; c < cell.Col + newColSpan; c++)
+            for (int r = newRow; r < newRow + newRowSpan; r++)
+                for (int c = newCol; c < newCol + newColSpan; c++)
                     newSlots.Add((r, c));
 
             var victims = _cells
                 .Where(other => other != cell && other.Occupies().Any(s => newSlots.Contains(s)))
                 .ToList();
 
-            var allVictimSlots = new HashSet<(int, int)>(
-                victims.SelectMany(v => v.Occupies()));
+            var allVictimSlots = new HashSet<(int, int)>(victims.SelectMany(v => v.Occupies()));
 
             foreach (var v in victims)
                 RemoveCell(v);
 
+            cell.Row = newRow;
+            cell.Col = newCol;
             cell.RowSpan = newRowSpan;
             cell.ColSpan = newColSpan;
             UpdateLabel(cell);
 
-            // Any slot inside a victim that is not occupied by expanded slot
-            // Becomes a new 1x1 cell
+            // Re-fill any victim slots that are NOT covered by the resized cell
             var expandedSlots = new HashSet<(int, int)>(cell.Occupies());
-
             foreach (var (r, c) in allVictimSlots)
             {
                 if (!expandedSlots.Contains((r, c)))
                 {
-                    // Only create if no existing cell already covers this slot
-                    bool alreadyCovered = _cells.Any(existing =>
-                        existing.Occupies().Contains((r, c)));
-                    if (!alreadyCovered)
-                        AddCell(r, c, 1, 1);
+                    bool covered = _cells.Any(existing => existing.Occupies().Contains((r, c)));
+                    if (!covered) AddCell(r, c, 1, 1);
                 }
             }
         }
@@ -361,9 +476,7 @@ namespace Monitoring_The_Situation
         private void RemoveCell(CellModel cell)
         {
             _canvas.Children.Remove(cell.Border);
-            _canvas.Children.Remove(cell.RightHandle);
-            _canvas.Children.Remove(cell.BottomHandle);
-            _canvas.Children.Remove(cell.CornerHandle);
+            foreach (var h in AllHandles(cell)) _canvas.Children.Remove(h);
             _cells.Remove(cell);
         }
 
@@ -374,7 +487,6 @@ namespace Monitoring_The_Situation
         {
             foreach (var cell in _cells)
                 LayoutCell(cell);
-
             BringPreviewToFront();
         }
 
@@ -390,26 +502,29 @@ namespace Monitoring_The_Situation
             cell.Border!.Width = w;
             cell.Border!.Height = h;
 
-            // Right handle
-            double rh = Math.Max(h * 0.40, 28);
-            Canvas.SetLeft(cell.RightHandle!, x + w - HANDLE_HIT / 2.0);
-            Canvas.SetTop(cell.RightHandle!, y + (h - rh) / 2.0);
-            cell.RightHandle!.Width = HANDLE_HIT;
-            cell.RightHandle!.Height = rh;
+            double vhh = Math.Max(h * 0.40, 28);   // vertical-handle height
+            double hhw = Math.Max(w * 0.40, 28);   // horizontal-handle width
+            double cs = HANDLE_HIT + 2;            // corner size
 
-            // Bottom handle
-            double bw = Math.Max(w * 0.40, 28);
-            Canvas.SetLeft(cell.BottomHandle!, x + (w - bw) / 2.0);
-            Canvas.SetTop(cell.BottomHandle!, y + h - HANDLE_HIT / 2.0);
-            cell.BottomHandle!.Width = bw;
-            cell.BottomHandle!.Height = HANDLE_HIT;
+            // Edges
+            Place(cell.LeftHandle!, x - HANDLE_HIT / 2, y + (h - vhh) / 2, HANDLE_HIT, vhh);
+            Place(cell.RightHandle!, x + w - HANDLE_HIT / 2, y + (h - vhh) / 2, HANDLE_HIT, vhh);
+            Place(cell.TopHandle!, x + (w - hhw) / 2, y - HANDLE_HIT / 2, hhw, HANDLE_HIT);
+            Place(cell.BottomHandle!, x + (w - hhw) / 2, y + h - HANDLE_HIT / 2, hhw, HANDLE_HIT);
 
-            // Corner handle
-            double ch = HANDLE_HIT + 2;
-            Canvas.SetLeft(cell.CornerHandle!, x + w - ch / 2.0);
-            Canvas.SetTop(cell.CornerHandle!, y + h - ch / 2.0);
-            cell.CornerHandle!.Width = ch;
-            cell.CornerHandle!.Height = ch;
+            // Corners
+            Place(cell.TopLeftHandle!, x - cs / 2, y - cs / 2, cs, cs);
+            Place(cell.TopRightHandle!, x + w - cs / 2, y - cs / 2, cs, cs);
+            Place(cell.BottomLeftHandle!, x - cs / 2, y + h - cs / 2, cs, cs);
+            Place(cell.BottomRightHandle!, x + w - cs / 2, y + h - cs / 2, cs, cs);
+        }
+
+        private static void Place(UIElement el, double left, double top, double w, double h)
+        {
+            Canvas.SetLeft(el, left);
+            Canvas.SetTop(el, top);
+            ((FrameworkElement)el).Width = w;
+            ((FrameworkElement)el).Height = h;
         }
 
         private void UpdatePreview(int row, int col, int rowSpan, int colSpan)
@@ -422,19 +537,9 @@ namespace Monitoring_The_Situation
 
         private void BringPreviewToFront()
         {
-            if (_canvas.Children.Contains(_preview))
-            {
-                _canvas.Children.Remove(_preview);
-                _canvas.Children.Add(_preview);
-            }
-        }
-
-        private void ShowHandles(CellModel cell, bool show)
-        {
-            double op = show ? 1.0 : 0.0;
-            if (cell.RightHandle != null) cell.RightHandle.Opacity = op;
-            if (cell.BottomHandle != null) cell.BottomHandle.Opacity = op;
-            if (cell.CornerHandle != null) cell.CornerHandle.Opacity = op;
+            if (!_canvas.Children.Contains(_preview)) return;
+            _canvas.Children.Remove(_preview);
+            _canvas.Children.Add(_preview);
         }
 
         private void UpdateLabel(CellModel cell)
