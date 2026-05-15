@@ -606,10 +606,23 @@ namespace Monitoring_The_Situation
         private void CloseTabButton_Click(object sender, RoutedEventArgs e)
         {
             if (MainTabControl.Items.Count <= 1) return;
-            int idx = MainTabControl.SelectedIndex;
-            var item = MainTabControl.SelectedItem as TabItem;
-            if (item?.Content is Canvas c) _hosts.Remove(c);
-            MainTabControl.Items.Remove(MainTabControl.SelectedItem);
+            DependencyObject? current = sender as DependencyObject;
+            TabItem? tabToClose = null;
+            while (current != null)
+            {
+                if (current is TabItem ti)
+                {
+                    tabToClose = ti;
+                    break;
+                }
+                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            }
+
+            if (tabToClose == null) return;
+
+            int idx = MainTabControl.Items.IndexOf(tabToClose);
+            if (tabToClose.Content is Canvas c) _hosts.Remove(c);
+            MainTabControl.Items.Remove(tabToClose);
             MainTabControl.SelectedIndex = Math.Max(idx - 1, 0);
         }
 
@@ -620,3 +633,5 @@ namespace Monitoring_The_Situation
         }
     }
 }
+
+// Still need to fix bug where if tab 1 is closed while tab 2 is open, adding another tab is still named tab 2 (it should be tab 3)
