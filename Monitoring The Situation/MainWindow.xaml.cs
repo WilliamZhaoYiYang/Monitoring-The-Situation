@@ -471,6 +471,19 @@ namespace Monitoring_The_Situation
                     if (!covered) AddCell(r, c, 1, 1);
                 }
             }
+            FillEmptySlots();
+        }
+
+        private void FillEmptySlots()
+        {
+            for (int r = 0; r < ROWS; r++)
+            {
+                for (int c = 0; c < COLS; c++)
+                {
+                    bool covered = _cells.Any(cell => cell.Occupies().Contains((r, c)));
+                    if (!covered) AddCell(r, c, 1, 1);
+                }
+            }
         }
 
         private void RemoveCell(CellModel cell)
@@ -502,8 +515,8 @@ namespace Monitoring_The_Situation
             cell.Border!.Width = w;
             cell.Border!.Height = h;
 
-            double vhh = Math.Max(h * 0.40, 28);   // vertical-handle height
-            double hhw = Math.Max(w * 0.40, 28);   // horizontal-handle width
+            double vhh = Math.Max(h, 28);   // vertical-handle height
+            double hhw = Math.Max(w, 28);   // horizontal-handle width
             double cs = HANDLE_HIT + 2;            // corner size
 
             // Edges
